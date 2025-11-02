@@ -50,7 +50,7 @@ public static class DataHelper
     /// <param name="commandText">Texto del comando</param>
     /// <param name="commandType">Tipo de comando</param>
     /// <returns></returns>
-    public static SqlCommand CreateCommand(this SqlConnection conn, string commandText, CommandType commandType)
+    public static SqlCommand CreateCommand(this SqlConnection conn, string commandText, CommandType commandType = CommandType.StoredProcedure)
     {
         var cmd = conn.CreateCommand();
         cmd.CommandText = commandText;
