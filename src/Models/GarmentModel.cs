@@ -14,8 +14,7 @@ public class GarmentModel
     /// <summary>
     /// Nombre de la prenda
     /// </summary>
-    [Required]
-    public string Name { get; set; }
+    public string? Name { get; set; }
     /// <summary>
     /// Identificador del tipo de prenda
     /// </summary>

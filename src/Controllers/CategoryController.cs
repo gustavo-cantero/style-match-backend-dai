@@ -19,14 +19,17 @@ public class CategoryController : ControllerBase
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
+        if (string.IsNullOrWhiteSpace(data.Name))
+            return ValidationProblem("El nombre de la categoría es obligatorio");
+
         data.ExternalId = Guid.CreateVersion7();
 
         int res = await Data.Category.AddAsync(HttpContext.GetUserId(), data);
         return res switch
         {
             1 => Ok(data.ExternalId),
-            -1 => Conflict("Existe otra categoría con el mismo nombre"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
+            _ => StatusCode(500, "Error al actualizar la categoría"),
         };
     }
 
@@ -41,15 +44,18 @@ public class CategoryController : ControllerBase
             return ValidationProblem(ModelState);
 
         if (!data.ExternalId.HasValue)
-            return BadRequest("El identificador de la categoría es obligatorio");
+            return ValidationProblem("El identificador de la categoría es obligatorio");
+
+        if (string.IsNullOrWhiteSpace(data.Name))
+            return ValidationProblem("El nombre de la categoría es obligatorio");
 
         int res = await Data.Category.UpdateAsync(HttpContext.GetUserId(), data);
         return res switch
         {
             1 => Ok(data.ExternalId),
             0 => NotFound(),
-            -1 => Conflict("Existe otra categoría con el mismo nombre"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
+            _ => StatusCode(500, "Error al actualizar la categoría"),
         };
     }
 

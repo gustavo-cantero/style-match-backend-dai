@@ -7,7 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+
     <PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
+    <Compile Remove="Garment\**" />
+    <Content Remove="Garment\**" />
+    <EmbeddedResource Remove="Garment\**" />
+    <None Remove="Garment\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.10" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
