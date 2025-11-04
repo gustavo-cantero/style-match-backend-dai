@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+    <PackageReference Include="Google.Apis.Auth" Version="1.72.0" />
     <Compile Remove="Garment\**" />
     <Content Remove="Garment\**" />
     <EmbeddedResource Remove="Garment\**" />

@@ -16,6 +16,13 @@ public class Program
 
         ConfigurationModel config = new();
         builder.Configuration.GetSection("App").Bind(config);
+        // Sobrescribir datos SMTP con variables de entorno (si existen) - para envío del mail de contraseña
+        config.SmtpServer = Environment.GetEnvironmentVariable("SMTP_SERVER") ?? config.SmtpServer;
+        config.SmtpPort = int.TryParse(Environment.GetEnvironmentVariable("SMTP_PORT"), out int port) ? port : config.SmtpPort;
+        config.SmtpUser = Environment.GetEnvironmentVariable("SMTP_USER") ?? config.SmtpUser;
+        config.SmtpPassword = Environment.GetEnvironmentVariable("SMTP_PASSWORD") ?? config.SmtpPassword;
+        config.SmtpFrom = Environment.GetEnvironmentVariable("SMTP_FROM") ?? config.SmtpFrom;
+
         builder.Services.AddSingleton(config);
 
         builder.Services.AddControllers();

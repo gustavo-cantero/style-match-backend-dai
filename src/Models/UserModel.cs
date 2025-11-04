@@ -41,4 +41,8 @@ public class UserModel
     /// Establece si el usuario está activo
     /// </summary>
     public bool IsActive { get; set; } = true;
+
+    public string? ProfileImage { get; set; }
+    public string? Provider { get; set; }
+
 }

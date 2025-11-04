@@ -49,6 +49,23 @@ public static class Auth
         return null;
     }
 
+
+    /// <summary>
+    /// Login del usuario con una cuenta de Google y devuelve un token.
+    /// </summary>
+    /// <param name="config">Configuración de la aplicación</param>
+    /// <param name="email">E-mail del usuario</param>
+    /// <returns>Token nuevo</returns>
+    public static async Task<JwtTokenResponseModel?> LoginWithGoogleAsync(ConfigurationModel config, string email)
+    {
+        var user = await User.GetAsync(email);
+        if (user == null || !user.IsActive)
+            return null;
+
+        return await CreateTokenAsync(config, email);
+    }
+
+
     /// <summary>
     /// Crea un token para un usuario
     /// </summary>
