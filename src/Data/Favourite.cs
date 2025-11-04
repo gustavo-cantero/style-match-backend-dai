@@ -15,31 +15,53 @@ public static class Favourite
     /// </summary>
     /// <param name="userId">Identificador del usuario</param>
     /// <param name="data">Datos del favorito</param>
-    public static async Task<int> AddAsync(int userId, FavouriteModel data)
+    /// <param name="isUpdate">Indica si es una actualización</param>
+    /// <returns>Identificador del favorito o código de error</returns>
+    public static async Task<int> SaveAsync(int userId, FavouriteModel data, bool isUpdate)
     {
         using var conn = await DataHelper.CreateConnection();
-        using SqlCommand cmd = conn.CreateCommand("Favourite_Add");
-        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
-        cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = data.ExternalId;
-        cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = data.Name;
-        cmd.Parameters.Add("@CategoryExternalId", SqlDbType.UniqueIdentifier).Value = data.Category.ExternalId;
-        return await cmd.ExecuteReturnInt32Async();
-    }
+        var tran = (SqlTransaction)await conn.BeginTransactionAsync();
+        try
+        {
+            using SqlCommand cmd = conn.CreateCommand(isUpdate ? "Favourite_Update" : "Favourite_Add");
+            cmd.Transaction = tran;
+            cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = data.ExternalId;
+            cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+            cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = data.Name;
+            cmd.Parameters.Add("@CategoryExternalId", SqlDbType.UniqueIdentifier).Value = data.Category.ExternalId;
+            int res = await cmd.ExecuteReturnInt32Async();
 
-    /// <summary>
-    /// Graba los datos de un favorito
-    /// </summary>
-    /// <param name="userId">Identificador del usuario</param>
-    /// <param name="data">Datos del favorito</param>
-    public static async Task<int> UpdateAsync(int userId, FavouriteModel data)
-    {
-        using var conn = await DataHelper.CreateConnection();
-        using SqlCommand cmd = conn.CreateCommand("Favourite_Update");
-        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
-        cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = data.ExternalId;
-        cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = data.Name;
-        cmd.Parameters.Add("@CategoryExternalId", SqlDbType.UniqueIdentifier).Value = data.Category.ExternalId;
-        return await cmd.ExecuteReturnInt32Async();
+            cmd.Parameters.Clear();
+            cmd.Parameters.Add("@FavouriteId", SqlDbType.Int).Value = res;
+
+            if (isUpdate)
+            {
+                //Si es un update, elimino las prendas anteriores
+                cmd.CommandText = "Favourite_DeleteGarments";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            //Si res < 0 es un error
+            if (res > 0 && data.Garments != null)
+            {
+                cmd.CommandText = "Favourite_AddGarment";
+                var p = cmd.Parameters.Add("@GarmentExternalId", SqlDbType.UniqueIdentifier);
+                //Agrego las prendas
+                foreach (var garment in data.Garments)
+                {
+                    p.Value = garment.ExternalId;
+                    await cmd.ExecuteNonQueryAsync();
+                }
+            }
+
+            await tran.CommitAsync();
+            return 1;
+        }
+        catch
+        {
+            await tran.RollbackAsync();
+            throw;
+        }
     }
 
     /// <summary>

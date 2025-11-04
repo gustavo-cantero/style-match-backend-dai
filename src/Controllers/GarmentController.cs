@@ -20,7 +20,7 @@ public class GarmentController : ControllerBase
         if (!Request.Form.Files.Any() || !Request.Form.ContainsKey("data"))
             return BadRequest();
 
-        GarmentModel garment;
+        GarmentModel? garment;
         try
         {
             garment = JsonSerializer.Deserialize<GarmentModel>(
@@ -38,11 +38,13 @@ public class GarmentController : ControllerBase
         if (garment == null)
             return BadRequest();
 
+        if (string.IsNullOrWhiteSpace(garment.Name))
+            return ValidationProblem("Debe especificar un nombre");
+
         //Leo y cambio de tamaño la imagen
         garment.ExternalId = Guid.CreateVersion7();
 
         var file = Request.Form.Files[0];
-
 
         // Creo la carpeta si no existe
         var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Garment");
@@ -91,7 +93,7 @@ public class GarmentController : ControllerBase
             1 => Ok(),
             0 => NotFound(),
             -1 => ValidationProblem("No existe el tipo de prenda"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            _ => StatusCode(500, "Error al actualizar la prenda"),
         };
     }
 
