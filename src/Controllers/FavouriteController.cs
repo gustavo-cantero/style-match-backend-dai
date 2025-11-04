@@ -22,15 +22,18 @@ public class FavouriteController : ControllerBase
         if (string.IsNullOrWhiteSpace(data.Name))
             return ValidationProblem("El nombre del favorito es obligatorio");
 
+        if (!(data.Garments?.Any() ?? false))
+            return ValidationProblem("Debe poseer al menos una prenda");
+
         data.ExternalId = Guid.CreateVersion7();
 
-        int res = await Data.Favourite.AddAsync(HttpContext.GetUserId(), data);
+        int res = await Data.Favourite.SaveAsync(HttpContext.GetUserId(), data, false);
         return res switch
         {
             1 => Ok(data.ExternalId),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
             -2 => ValidationProblem("No existe la categoría"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            _ => StatusCode(500, "Error al actualizar el favorito"),
         };
     }
 
@@ -50,13 +53,16 @@ public class FavouriteController : ControllerBase
         if (string.IsNullOrWhiteSpace(data.Name))
             return ValidationProblem("El nombre del favorito es obligatorio");
 
-        int res = await Data.Favourite.UpdateAsync(HttpContext.GetUserId(), data);
+        if (!(data.Garments?.Any() ?? false))
+            return ValidationProblem("Debe poseer al menos una prenda");
+
+        int res = await Data.Favourite.SaveAsync(HttpContext.GetUserId(), data, true);
         return res switch
         {
             1 => Ok(data.ExternalId),
             0 => NotFound(),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            _ => StatusCode(500, "Error al actualizar el favorito"),
         };
     }
 

@@ -29,7 +29,7 @@ public class CategoryController : ControllerBase
         {
             1 => Ok(data.ExternalId),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            _ => StatusCode(500, "Error al actualizar la categoría"),
         };
     }
 
@@ -55,7 +55,7 @@ public class CategoryController : ControllerBase
             1 => Ok(data.ExternalId),
             0 => NotFound(),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
-            _ => StatusCode(500, "Error al actualizar el usuario"),
+            _ => StatusCode(500, "Error al actualizar la categoría"),
         };
     }
 
