@@ -139,4 +139,23 @@ public static class User
         cmd.Parameters.Add("@Email", SqlDbType.VarChar, 200).Value = email;
         return await cmd.ExecuteReturnInt32Async() > 0;
     }
+
+
+    /// <summary>
+    /// Actualiza la contraseña de un usuario utilizando el código de recuperación
+    /// </summary>
+    /// <param name="userId">Identificador del usuario</param>
+    /// <param name="newPassword">Nueva contraseña</param>
+    /// <returns>Devuelve si se pudo actualizar correctamente</returns>
+    public static async Task<bool> UpdatePasswordAsync(int userId, string newPassword)
+    {
+        using var conn = await DataHelper.CreateConnection();
+        using SqlCommand cmd = conn.CreateCommand("User_UpdatePasswordWithRecoveryCode", CommandType.StoredProcedure);
+
+        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        cmd.Parameters.Add("@NewPassword", SqlDbType.NVarChar, 100).Value = newPassword;
+
+        return await cmd.ExecuteReturnInt32Async() > 0;
+    }
+
 }
