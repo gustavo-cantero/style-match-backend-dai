@@ -8,7 +8,7 @@ using System.Data;
 using System.Net;
 using System.Net.Mail;
 using StyleMatch.Helpers;
-
+using Google.Apis.Auth; 
 
 
 namespace StyleMatch.Controllers;
@@ -151,6 +151,66 @@ public class AuthController(ConfigurationModel config) : ControllerBase
         }
 
         return Ok("La contraseña fue actualizada correctamente.");
+    }
+
+    [HttpPost("google")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginModel data)
+    {
+        if (data == null || string.IsNullOrWhiteSpace(data.IdToken))
+            return BadRequest("Token de Google inválido.");
+
+        try
+        {
+            // Validar el token de Google
+            var payload = await GoogleJsonWebSignature.ValidateAsync(
+                data.IdToken,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { config.GoogleClientId }
+                }
+            );
+
+            var email = payload.Email;
+            var name = payload.Name ?? email;
+            var picture = payload.Picture;
+            //buscar el usuario
+            Console.WriteLine($"Google payload email: {payload.Email}");
+            //si no existe, crearlo
+            var user = await Data.User.GetAsync(email);
+
+            if (user == null)
+            {
+                var nuevo = new UserModel
+                {
+                    Name = name,
+                    Email = email,
+                    IsActive = true,
+                    RoleId = Role.User
+                };
+
+                await Data.User.CreateFromGoogleAsync(nuevo);
+
+                // Luego de crearlo, lo leemos de nuevo
+                user = await Data.User.GetAsync(email);
+            }
+
+
+            // Generar JWT interno 
+            var token = await Auth.LoginWithGoogleAsync(config, user.Email);
+            if (token == null)
+                return Unauthorized();
+
+            return Ok(token);
+        }
+        catch (InvalidJwtException)
+        {
+            return Unauthorized("Token de Google inválido o expirado.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            return StatusCode(500, "Error al procesar el inicio de sesión con Google.");
+        }
     }
 
 

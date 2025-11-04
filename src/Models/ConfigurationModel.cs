@@ -29,5 +29,10 @@ public class ConfigurationModel
     public string SmtpPassword { get; set; }
     public string SmtpFrom { get; set; }
 
+    //Las siguientes lineas son para poder tener el botón de log in with Google
+    public string GoogleClientId { get; set; } = string.Empty;
+    public string GoogleClientSecret { get; set; } = string.Empty;
+
+
 }
 

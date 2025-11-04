@@ -76,6 +76,9 @@ public static class User
         return (await cmd.ExecuteReturnInt32Async()) == 1;
     }
 
+
+    
+
     #endregion
 
     /// <summary>
@@ -157,5 +160,25 @@ public static class User
 
         return await cmd.ExecuteReturnInt32Async() > 0;
     }
+
+    /// <summary>
+    ///  Para que funcione la opción de log in with google
+    /// </summary>
+    /// <summary>
+    /// Crea un usuario desde Google Login (sin contraseña)
+    /// </summary>
+    public static async Task CreateFromGoogleAsync(UserModel user)
+    {
+        using var conn = await DataHelper.CreateConnection();
+        using var cmd = conn.CreateCommand("User_CreateFromGoogle", CommandType.StoredProcedure);
+
+        cmd.Parameters.Add("@Email", SqlDbType.NVarChar, 200).Value = user.Email!;
+        cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 100).Value = (object?)user.Name ?? DBNull.Value;
+        cmd.Parameters.Add("@IsActive", SqlDbType.Bit).Value = user.IsActive;
+
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+
 
 }
