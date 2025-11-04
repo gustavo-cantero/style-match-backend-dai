@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace StyleMatch.Models;
 
@@ -15,8 +14,7 @@ public class CategoryModel
     /// <summary>
     /// Nombre de la categoría
     /// </summary>
-    [Required]
-    public string Name { get; set; }
+    public string? Name { get; set; }
     /// <summary>
     /// Grupos de favoritos asociados a la categoría
     /// </summary>

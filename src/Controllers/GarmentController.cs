@@ -13,6 +13,7 @@ public class GarmentController : ControllerBase
 {
     [HttpPost]
     [RequestSizeLimit(2 * 1024 * 1024)] //2MB
+    [RequestFormLimits(MultipartBodyLengthLimit = 1024L * 1024 * 2, MultipartHeadersLengthLimit = 1024 * 1024)]
     public async Task<IActionResult> Upload()
     {
         //Validaciones de los datos
@@ -89,7 +90,7 @@ public class GarmentController : ControllerBase
         {
             1 => Ok(),
             0 => NotFound(),
-            -1 => Conflict("No existe el tipo de prenda"),
+            -1 => ValidationProblem("No existe el tipo de prenda"),
             _ => StatusCode(500, "Error al actualizar el usuario"),
         };
     }

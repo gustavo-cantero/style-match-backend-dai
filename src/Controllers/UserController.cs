@@ -48,7 +48,7 @@ public class UserController(ConfigurationModel config) : ControllerBase
         return res switch
         {
             0 => Ok(await Auth.CreateTokenAsync(config, data.Email)),
-            -1 => Conflict("The user already exists"),
+            -1 => ValidationProblem("El usuario ya existe"),
             _ => StatusCode(500, "Error al crear el usuario"),
         };
     }
@@ -70,7 +70,7 @@ public class UserController(ConfigurationModel config) : ControllerBase
         return res switch
         {
             0 => Ok(),
-            -1 => Conflict("El usuario ya existe"),
+            -1 => ValidationProblem("El usuario ya existe"),
             _ => StatusCode(500, "Error al actualizar el usuario"),
         };
     }
