@@ -57,9 +57,12 @@ public class GarmentController : ControllerBase
         try
         {
             // Guardo el archivo en disco
-            using var imgStream = file.OpenReadStream();
-            ImageResizer.ResizeToJpeg(imgStream, Const.MAX_GARMENT_IMAGE_SIZE, fileImg, Const.JPEG_QUALITY);
-            ImageResizer.CreateThumb(imgStream, Const.MAX_GARMENT_THUMB_SIZE, fileThumb, Const.JPEG_QUALITY);
+            using (var mainStream = file.OpenReadStream())
+            ImageResizer.ResizeToJpeg(mainStream, Const.MAX_GARMENT_IMAGE_SIZE, fileImg, Const.JPEG_QUALITY);
+
+            // Vuelvo a abrir el stream para crear el thumbnail
+            using (var thumbStream = file.OpenReadStream())
+            ImageResizer.CreateThumb(thumbStream, Const.MAX_GARMENT_THUMB_SIZE, fileThumb, Const.JPEG_QUALITY);
 
             //Guardo los datos en la base
             await Data.Garment.AddAsync(HttpContext.GetUserId(), garment);
