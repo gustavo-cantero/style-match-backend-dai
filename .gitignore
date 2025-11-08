@@ -268,3 +268,6 @@ __pycache__/
 /Sources/BeOn.Service/App.config.prod
 
 /src/appsettings.Development.json
+/src/Properties/PublishProfiles
+/src/.config
+/src/StyleMatch.csproj.user
