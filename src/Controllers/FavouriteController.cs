@@ -41,9 +41,12 @@ public class FavouriteController : ControllerBase
     /// Actualización de un favorito
     /// </summary>
     /// <param name="data">Datos del favorito</param>
-    [HttpPut]
-    public async Task<IActionResult> Update([FromBody] FavouriteModel data)
+    /// <param name="externalId">Identificador del favorito</param>
+    [HttpPut("{externalId:guid}")]
+    public async Task<IActionResult> Update(Guid externalId, [FromBody] FavouriteModel data)
     {
+        data.ExternalId = externalId;
+
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 

@@ -37,9 +37,12 @@ public class CategoryController : ControllerBase
     /// Actualización de una categoría
     /// </summary>
     /// <param name="data">Datos de la categoría</param>
-    [HttpPut]
-    public async Task<IActionResult> Update([FromBody] CategoryModel data)
+    /// <param name="externalId">Identificador de la categoría</param>
+    [HttpPut("{externalId:guid}")]
+    public async Task<IActionResult> Update(Guid externalId, [FromBody] CategoryModel data)
     {
+        data.ExternalId = externalId;
+
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 

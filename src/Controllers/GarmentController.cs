@@ -58,11 +58,11 @@ public class GarmentController : ControllerBase
         {
             // Guardo el archivo en disco
             using (var mainStream = file.OpenReadStream())
-            ImageResizer.ResizeToJpeg(mainStream, Const.MAX_GARMENT_IMAGE_SIZE, fileImg, Const.JPEG_QUALITY);
+                ImageResizer.ResizeToJpeg(mainStream, Const.MAX_GARMENT_IMAGE_SIZE, fileImg, Const.JPEG_QUALITY);
 
             // Vuelvo a abrir el stream para crear el thumbnail
             using (var thumbStream = file.OpenReadStream())
-            ImageResizer.CreateThumb(thumbStream, Const.MAX_GARMENT_THUMB_SIZE, fileThumb, Const.JPEG_QUALITY);
+                ImageResizer.CreateThumb(thumbStream, Const.MAX_GARMENT_THUMB_SIZE, fileThumb, Const.JPEG_QUALITY);
 
             //Guardo los datos en la base
             await Data.Garment.AddAsync(HttpContext.GetUserId(), garment);
@@ -84,9 +84,12 @@ public class GarmentController : ControllerBase
     /// Actualización de una prenda
     /// </summary>
     /// <param name="data">Datos de la prenda</param>
-    [HttpPut]
-    public async Task<IActionResult> Update([FromBody] GarmentModel data)
+    /// <param name="externalId">Identificador de la prenda</param>
+    [HttpPut("{externalId:guid}")]
+    public async Task<IActionResult> Update(Guid externalId, [FromBody] GarmentModel data)
     {
+        data.ExternalId = externalId;
+
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
