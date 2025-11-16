@@ -22,12 +22,31 @@ public class ConfigurationModel
     /// </summary>
     public int JWTExpiresMinutes { get; set; } = 30;
 
-    /// Las siguientes lienas son para poder enviar el mail de recuperación de contraseña
+    /// <summary>
+    /// Servidor SMTP para el envío de correos
+    /// </summary>
     public string SmtpServer { get; set; }
+    /// <summary>
+    /// Puerto del servidor SMTP
+    /// </summary>
     public int SmtpPort { get; set; }
+    /// <summary>
+    /// Usuario del servidor SMTP
+    /// </summary>
     public string SmtpUser { get; set; }
+    /// <summary>
+    /// Contraseña del servidor SMTP
+    /// </summary>
     public string SmtpPassword { get; set; }
+    /// <summary>
+    /// Correo desde el cual se envían los emails
+    /// </summary>
     public string SmtpFrom { get; set; }
+
+    /// <summary>
+    /// Api Key de OpenAI
+    /// </summary>
+    public string OpenAIKey { get; set; }
 
     //Las siguientes lineas son para poder tener el botón de log in with Google
     public string GoogleClientId { get; set; } = string.Empty;

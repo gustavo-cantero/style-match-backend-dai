@@ -1,14 +1,53 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StyleMatch.Models;
+using StyleMatch.Services;
+using io = System.IO;
 
 namespace StyleMatch.Controllers;
 
+/// <summary>
+/// Controller para el manejo de los favoritos
+/// </summary>
+/// <param name="config">Configuración de la aplicación</param>
 [Route("api/[controller]")]
 [ApiController]
 [Authorize]
-public class FavouriteController : ControllerBase
+public class FavouriteController(ConfigurationModel config) : ControllerBase
 {
+    //#region Métodos privados
+
+    /// <summary>
+    /// Crea de nuevo la imagen del favorito
+    /// </summary>
+    /// <param name="data">Datos del favorito</param>
+    private async Task CreateImage(FavouriteModel data)
+    {
+        var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Garment");
+
+        var imgAI = await OutfitService.GenerateOutfitAsync(
+            data.Garments.Select(g => Path.Combine(folderPath, g.ExternalId.ToString())),
+            config.OpenAIKey
+        );
+
+        //Guardo la imagen completa
+        folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Favourites");
+        string fileImg = Path.Combine(folderPath, data.ExternalId.ToString());
+        using FileStream fs = new(fileImg, FileMode.Create, FileAccess.Write);
+        {
+            await fs.WriteAsync(imgAI);
+            fs.Close();
+        }
+
+        // Guardo el thumbnail
+        string fileThumb = $"{fileImg}.thumb";
+        using (MemoryStream thumbStream = new(imgAI))
+            ImageResizer.CreateThumb(thumbStream, Const.MAX_GARMENT_THUMB_SIZE, fileThumb, Const.JPEG_QUALITY);
+    }
+
+    //#endregion
+
+
     /// <summary>
     /// Creación de un favorito
     /// </summary>
@@ -28,11 +67,17 @@ public class FavouriteController : ControllerBase
         data.ExternalId = Guid.CreateVersion7();
 
         int res = await Data.Favourite.SaveAsync(HttpContext.GetUserId(), data, false);
+
+        if (res == 2) //Cambiaron las prendas asignadas
+            await CreateImage(data);
+
         return res switch
         {
             1 => Ok(data.ExternalId),
+            2 => Ok(data.ExternalId),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
             -2 => ValidationProblem("No existe la categoría"),
+            -3 => ValidationProblem("Al menos una de las prendas no es del usuario"),
             _ => StatusCode(500, "Error al actualizar el favorito"),
         };
     }
@@ -60,11 +105,18 @@ public class FavouriteController : ControllerBase
             return ValidationProblem("Debe poseer al menos una prenda");
 
         int res = await Data.Favourite.SaveAsync(HttpContext.GetUserId(), data, true);
+
+        if (res == 2) //Cambiaron las prendas asignadas
+            await CreateImage(data);
+
         return res switch
         {
             1 => Ok(data.ExternalId),
+            2 => Ok(data.ExternalId),
             0 => NotFound(),
             -1 => ValidationProblem("Existe otra categoría con el mismo nombre"),
+            -2 => ValidationProblem("No existe la categoría"),
+            -3 => ValidationProblem("Al menos una de las prendas no es del usuario"),
             _ => StatusCode(500, "Error al actualizar el favorito"),
         };
     }
@@ -91,6 +143,36 @@ public class FavouriteController : ControllerBase
     }
 
     /// <summary>
+    /// Devuelve la imagen de un favorito
+    /// </summary>
+    /// <param name="externalId">Identificador del favorito</param>
+    /// <returns>Imagen del favorito</returns>
+    [HttpGet("{externalId:guid}/image")]
+    public async Task<IActionResult> GetImage(Guid externalId)
+    {
+        if (!(await Data.Favourite.ExistsAsync(HttpContext.GetUserId(), externalId)))
+            return NotFound();
+
+        string file = Path.Combine(Directory.GetCurrentDirectory(), "Favourites", externalId.ToString());
+        return PhysicalFile(file, "image/jpeg");
+    }
+
+    /// <summary>
+    /// Devuelve la miniatura de un favorito
+    /// </summary>s
+    /// <param name="externalId">Identificador del favorito</param>
+    /// <returns>Miniatura del favorito</returns>
+    [HttpGet("{externalId:guid}/thumb")]
+    public async Task<IActionResult> GetThumb(Guid externalId)
+    {
+        if (!(await Data.Favourite.ExistsAsync(HttpContext.GetUserId(), externalId)))
+            return NotFound();
+
+        string file = Path.Combine(Directory.GetCurrentDirectory(), "Favourites", $"{externalId}.thumb");
+        return PhysicalFile(file, "image/jpeg");
+    }
+
+    /// <summary>
     /// Elimina un favorito de un usuario
     /// </summary>
     /// <param name="externalId">Identificador del favorito</param>
@@ -98,7 +180,15 @@ public class FavouriteController : ControllerBase
     public async Task<IActionResult> Delete(Guid externalId)
     {
         if (await Data.Favourite.DeleteAsync(HttpContext.GetUserId(), externalId))
+        {
+            string file = Path.Combine(Directory.GetCurrentDirectory(), "Favourites", externalId.ToString());
+            if (io.File.Exists(file))
+                io.File.Delete(file);
+            file += ".thumb";
+            if (io.File.Exists(file))
+                io.File.Delete(file);
             return Ok();
+        }
         return NotFound();
     }
 }

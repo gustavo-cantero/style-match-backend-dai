@@ -19,49 +19,32 @@ public static class Favourite
     /// <returns>Identificador del favorito o código de error</returns>
     public static async Task<int> SaveAsync(int userId, FavouriteModel data, bool isUpdate)
     {
+        if (!(data.Garments?.Any() ?? false))
+            throw new ArgumentOutOfRangeException(nameof(data), "No tiene favoritos seleccionados");
+
         using var conn = await DataHelper.CreateConnection();
-        var tran = (SqlTransaction)await conn.BeginTransactionAsync();
-        try
-        {
-            using SqlCommand cmd = conn.CreateCommand(isUpdate ? "Favourite_Update" : "Favourite_Add");
-            cmd.Transaction = tran;
-            cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = data.ExternalId;
-            cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
-            cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = data.Name;
-            cmd.Parameters.Add("@CategoryExternalId", SqlDbType.UniqueIdentifier).Value = data.Category.ExternalId;
-            int res = await cmd.ExecuteReturnInt32Async();
+        using SqlCommand cmd = conn.CreateCommand(isUpdate ? "Favourite_Update" : "Favourite_Add");
+        cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = data.ExternalId;
+        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        cmd.Parameters.Add("@Name", SqlDbType.NVarChar, 50).Value = data.Name;
+        cmd.Parameters.Add("@CategoryExternalId", SqlDbType.UniqueIdentifier).Value = data.Category.ExternalId;
+        cmd.Parameters.Add("@GarmentExternalIds", SqlDbType.VarChar, 1000).Value = string.Join(",", data.Garments.Select(g => g.ExternalId.ToString()));
+        return await cmd.ExecuteReturnInt32Async();
+    }
 
-            cmd.Parameters.Clear();
-            cmd.Parameters.Add("@FavouriteId", SqlDbType.Int).Value = res;
-
-            if (isUpdate)
-            {
-                //Si es un update, elimino las prendas anteriores
-                cmd.CommandText = "Favourite_DeleteGarments";
-                await cmd.ExecuteNonQueryAsync();
-            }
-
-            //Si res < 0 es un error
-            if (res > 0 && data.Garments != null)
-            {
-                cmd.CommandText = "Favourite_AddGarment";
-                var p = cmd.Parameters.Add("@GarmentExternalId", SqlDbType.UniqueIdentifier);
-                //Agrego las prendas
-                foreach (var garment in data.Garments)
-                {
-                    p.Value = garment.ExternalId;
-                    await cmd.ExecuteNonQueryAsync();
-                }
-            }
-
-            await tran.CommitAsync();
-            return 1;
-        }
-        catch
-        {
-            await tran.RollbackAsync();
-            throw;
-        }
+    /// <summary>
+    /// Devuelve si existe un favorito de un usuario
+    /// </summary>
+    /// <param name="userId">Identificador del usuario</param>
+    /// <param name="externalId">Identificador externo del favorito</param>
+    /// <returns>True si existe, false si no</returns>
+    public static async Task<bool> ExistsAsync(int userId, Guid externalId)
+    {
+        using var conn = await DataHelper.CreateConnection();
+        using SqlCommand cmd = conn.CreateCommand("Favourite_Exists");
+        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = externalId;
+        return (await cmd.ExecuteReturnInt32Async()) == 1;
     }
 
     /// <summary>
