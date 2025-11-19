@@ -1,14 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Google.Apis.Auth;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MimeKit;
 using StyleMatch.Models;
-using Microsoft.Data.SqlClient;
-using StyleMatch.Data;
-using StyleMatch.Helpers;
-using System.Data;
-using System.Net;
-using System.Net.Mail;
-using StyleMatch.Helpers;
-using Google.Apis.Auth; 
+using System.Security.Authentication;
 
 
 namespace StyleMatch.Controllers;
@@ -67,42 +64,38 @@ public class AuthController(ConfigurationModel config) : ControllerBase
             return NotFound("Usuario no encontrado o inactivo.");
 
         // Genero un código aleatorio de 6 dígitos
-        var random = new Random();
-        var code = random.Next(100000, 999999).ToString();
+        Random random = new();
+        var code = random.Next(0, 999999).ToString().PadLeft(6, '0');
 
-        // Actualizo el código y la expiración en la base de datos
-        using (var conn = await DataHelper.CreateConnection())
-        using (var cmd = conn.CreateCommand("User_UpdateRecoveryCode", CommandType.StoredProcedure))
-        {
-            cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = user.UserId;
-            cmd.Parameters.Add("@RecoveryCode", SqlDbType.NVarChar, 10).Value = code;
-            cmd.Parameters.Add("@ExpiresOn", SqlDbType.DateTime2).Value = DateTime.UtcNow.AddMinutes(15);
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        // Configuración del cliente SMTP
-        using var smtp = new SmtpClient(config.SmtpServer, config.SmtpPort)
-        {
-            Credentials = new NetworkCredential(config.SmtpUser, config.SmtpPassword),
-            EnableSsl = true
-        };
+        // Guardo el código en la base de datos
+        await Data.User.UpdateRecoveryCode(user.UserId!.Value, code);
 
         // Armo el mensaje
-        var message = new MailMessage
+        using MimeMessage message = new()
         {
-            From = new MailAddress(config.SmtpFrom),
             Subject = "Recuperación de contraseña - StyleMatch",
-            Body = $"Hola {user.Name},\n\nTu código de recuperación de contraseña es: {code}\n" +
+            Body = new TextPart("plain")
+            {
+                Text = $"Hola {user.Name},\n\nTu código de recuperación de contraseña es: {code}\n" +
                 "Este código expira en 15 minutos.\n\n" +
-                "Si no solicitaste un cambio de contraseña, ignorá este mensaje.",
-            IsBodyHtml = false
+                "Si no solicitaste un cambio de contraseña, ignorá este mensaje."
+            }
         };
-        message.To.Add(user.Email);
 
-        // Ahora sí, envío del correo
-        await smtp.SendMailAsync(message);
+        message.From.Add(new MailboxAddress("Style Match", config.SmtpFrom));
+        message.To.Add(new MailboxAddress(user.Name, user.Email));
 
-        return Ok("El código de recuperación fue enviado correctamente al correo.");
+        // Conexión, autenticación y envío del correo
+        using SmtpClient smtp = new() { SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13 };
+        await smtp.ConnectAsync(
+                config.SmtpServer,
+                config.SmtpPort,
+                SecureSocketOptions.StartTls
+            );
+        await smtp.AuthenticateAsync(config.SmtpUser, config.SmtpPassword);
+        await smtp.SendAsync(message);
+
+        return Ok("El código de recuperación fue enviado correctamente al correo");
     }
 
     /// <summary>
@@ -114,43 +107,27 @@ public class AuthController(ConfigurationModel config) : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var user = await Data.User.GetAsync(data.Email);
-        if (user == null || !user.IsActive)
-            return NotFound("Usuario no encontrado o inactivo.");
-
         // Verifico código y expiración
-        using (var conn = await DataHelper.CreateConnection())
-        using (var cmd = conn.CreateCommand("User_GetRecoveryData", CommandType.StoredProcedure))
+        var res = await Data.User.CheckRecoveryCode(data.Email, data.Code);
+
+        if (res == 1)
         {
-            cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = user.UserId;
-            using var dr = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow);
-            if (!await dr.ReadAsync())
-                return BadRequest("No hay código de recuperación activo.");
+            var user = await Data.User.GetAsync(data.Email);
+            if (user == null || !user.IsActive)
+                return NotFound("Usuario no encontrado o inactivo");
+            var updated = await Data.User.UpdatePasswordAsync(user.UserId!.Value, data.NewPassword);
+            if (!updated)
+                return StatusCode(500, "No se pudo actualizar la contraseña");
 
-            var storedCode = dr.GetString("RecoveryCode");
-            var expiresOn = dr.GetDateTime("ExpiresOn");
-
-            if (!string.Equals(storedCode, data.Code, StringComparison.Ordinal))
-                return BadRequest("El código ingresado es incorrecto.");
-
-            if (DateTime.UtcNow > expiresOn)
-                return BadRequest("El código ha expirado. Solicitá uno nuevo.");
+            return Ok("La contraseña fue actualizada correctamente");
         }
 
-        // Actualizo la contraseña
-        var updated = await Data.User.UpdatePasswordAsync(user.UserId!.Value, data.NewPassword);
-        if (!updated)
-            return StatusCode(500, "No se pudo actualizar la contraseña.");
-
-        // Limpio el código de recuperación en la DB
-        using (var conn = await DataHelper.CreateConnection())
-        using (var cmd = conn.CreateCommand("User_ClearRecoveryCode", CommandType.StoredProcedure))
+        return res switch
         {
-            cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = user.UserId;
-            await cmd.ExecuteNonQueryAsync();
-        }
-
-        return Ok("La contraseña fue actualizada correctamente.");
+            -1 => BadRequest("El código ingresado es incorrecto"),
+            -2 => BadRequest("El código ha expirado. Solicitá uno nuevo"),
+            _ => StatusCode(500, "No se pudo actualizar la contraseña"),
+        };
     }
 
     [HttpPost("google")]
@@ -215,5 +192,5 @@ public class AuthController(ConfigurationModel config) : ControllerBase
 
 
 
-    
+
 }

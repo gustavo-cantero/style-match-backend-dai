@@ -77,7 +77,7 @@ public static class User
     }
 
 
-    
+
 
     #endregion
 
@@ -161,12 +161,13 @@ public static class User
         return await cmd.ExecuteReturnInt32Async() > 0;
     }
 
-    /// <summary>
-    ///  Para que funcione la opción de log in with google
-    /// </summary>
+    /// <remarks>
+    /// Para que funcione la opción de log in with google
+    /// </remarks>
     /// <summary>
     /// Crea un usuario desde Google Login (sin contraseña)
     /// </summary>
+    /// <param name="user">Datos del usuario</param>
     public static async Task CreateFromGoogleAsync(UserModel user)
     {
         using var conn = await DataHelper.CreateConnection();
@@ -179,6 +180,35 @@ public static class User
         await cmd.ExecuteNonQueryAsync();
     }
 
+    /// <summary>
+    /// Actualiza el código de recuperación de contraseña de un usuario
+    /// </summary>
+    /// <param name="userId">Identificador del usuario</param>
+    /// <param name="recoveryCode">Código de recuperación</param>
+    public static async Task UpdateRecoveryCode(int userId, string recoveryCode)
+    {
+        // Actualizo el código y la expiración en la base de datos
+        using var conn = await DataHelper.CreateConnection();
+        using var cmd = conn.CreateCommand("User_UpdateRecoveryCode", CommandType.StoredProcedure);
 
+        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        cmd.Parameters.Add("@RecoveryCode", SqlDbType.VarChar, 6).Value = recoveryCode;
 
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>
+    /// Evalúa si el código de recuperación es válido
+    /// </summary>
+    /// <param name="email">Dirección de correo electrónico del usuario</param>
+    /// <param name="recoveryCode">Código de recuperación</param>
+    /// <returns>Resultado de la validación</returns>
+    public static async Task<int> CheckRecoveryCode(string email, string recoveryCode)
+    {
+        using var conn = await DataHelper.CreateConnection();
+        using var cmd = conn.CreateCommand("User_CheckRecoveryCode", CommandType.StoredProcedure);
+        cmd.Parameters.Add("@Email", SqlDbType.VarChar, 200).Value = email;
+        cmd.Parameters.Add("@RecoveryCode", SqlDbType.VarChar, 6).Value = recoveryCode;
+        return await cmd.ExecuteReturnInt32Async();
+    }
 }
