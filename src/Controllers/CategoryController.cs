@@ -88,10 +88,12 @@ public class CategoryController : ControllerBase
     /// </summary>
     /// <param name="externalId">Identificador de la categoría</param>
     [HttpDelete("{externalId:guid}")]
-    public async Task<IActionResult> Delete(Guid externalId)
-    {
-        if (await Data.Category.DeleteAsync(HttpContext.GetUserId(), externalId))
-            return Ok();
-        return NotFound();
-    }
+    public async Task<IActionResult> Delete(Guid externalId) =>
+        await Data.Category.DeleteAsync(HttpContext.GetUserId(), externalId) switch
+        {
+            1 => Ok(),
+            -1 => NotFound(),
+            -2 => ValidationProblem("No se puede eliminar la categoría porque tiene prendas asociadas"),
+            _ => StatusCode(500, "Error al eliminar la categoría")
+        };
 }

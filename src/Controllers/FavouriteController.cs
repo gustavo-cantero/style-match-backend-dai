@@ -36,7 +36,7 @@ public class FavouriteController(ConfigurationModel config) : ControllerBase
             //Guardo la imagen completa
             folderPath = Path.Combine(Directory.GetCurrentDirectory(), "Favourites");
             string fileImg = Path.Combine(folderPath, data.ExternalId.ToString());
-            using FileStream fs = new(fileImg, FileMode.Create, FileAccess.Write);
+            using (FileStream fs = new(fileImg, FileMode.Create, FileAccess.Write))
             {
                 await fs.WriteAsync(imgAI);
                 fs.Close();

@@ -105,12 +105,12 @@ public static class Category
     /// <param name="userId">Identificador del usuario</param>
     /// <param name="externalId">Identificador externo de la categoría</param>
     /// <returns>Resultado de la eliminación</returns>
-    internal static async Task<bool> DeleteAsync(int userId, Guid externalId)
+    internal static async Task<int> DeleteAsync(int userId, Guid externalId)
     {
         using var conn = await DataHelper.CreateConnection();
         using SqlCommand cmd = conn.CreateCommand("Category_Delete");
         cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
         cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = externalId;
-        return (await cmd.ExecuteReturnInt32Async()) == 1;
+        return await cmd.ExecuteReturnInt32Async();
     }
 }
