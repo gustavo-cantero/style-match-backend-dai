@@ -116,4 +116,24 @@ public static class Garment
         cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = externalId;
         return (await cmd.ExecuteReturnInt32Async()) == 1;
     }
+
+    /// <summary>
+    /// Devuelve los favoritos de una prenda
+    /// </summary>
+    /// <param name="externalId">Identificador de la prenda</param>
+    public static async Task<IEnumerable<FavouriteModel>> ListFavouriesAsync(Guid externalId)
+    {
+        using var conn = await DataHelper.CreateConnection();
+        using SqlCommand cmd = conn.CreateCommand("Garment_ListFavourites");
+        cmd.Parameters.Add("@ExternalId", SqlDbType.UniqueIdentifier).Value = externalId;
+        using var dr = await cmd.ExecuteReaderAsync();
+        List<FavouriteModel> list = [];
+        while (await dr.ReadAsync())
+            list.Add(new FavouriteModel()
+            {
+                ExternalId = dr.GetGuid("ExternalId"),
+                Name = dr.GetString("Name")
+            });
+        return list;
+    }
 }

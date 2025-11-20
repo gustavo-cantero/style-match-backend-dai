@@ -27,4 +27,7 @@ public class FavouriteModel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public CategoryModel Category { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? CategoryId { get; set; }
 }

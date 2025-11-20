@@ -115,6 +115,17 @@ public class GarmentController : ControllerBase
     }
 
     /// <summary>
+    /// Lista las outfits de una prenda
+    /// </summary>
+    /// <returns>Lista de las favoritos de la prenda</returns>
+    [HttpGet("{externalId:guid}/favourites")]
+    public async Task<IActionResult> ListFavourites(Guid externalId)
+    {
+        var dt = await Data.Garment.ListFavouriesAsync(externalId);
+        return Ok(dt);
+    }
+
+    /// <summary>
     /// Devuelve los datos de una prenda
     /// </summary>
     /// <param name="externalId">Identificador de la prenda</param>

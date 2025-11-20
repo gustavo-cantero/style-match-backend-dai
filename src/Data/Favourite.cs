@@ -62,7 +62,8 @@ public static class Favourite
             list.Add(new FavouriteModel()
             {
                 ExternalId = dr.GetGuid("ExternalId"),
-                Name = dr.GetString("Name")
+                Name = dr.GetString("Name"),
+                CategoryId = dr.GetGuid("CategoryId")
             });
         return list;
     }
